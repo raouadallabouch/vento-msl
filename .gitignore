@@ -1,0 +1,11 @@
+# Ignore internal data & documents
+*.xlsx
+*.xls
+*.csv
+*.pdf
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

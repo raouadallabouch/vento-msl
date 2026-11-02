@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Plateforme intelligente et minimaliste de suivi de distribution, analyse MSL et pilotage des ventes terrain.">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Vento MSL">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>Vento MSL | Suivi de Distribution Terrain</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans for Latin + Cairo/Amiri/Noto for Arabic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cairo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+  
+  <!-- SheetJS Library (Offline local copy with CDN fallback) -->
+  <script src="libs/xlsx.full.min.js"></script>
+  <script>
+    if (typeof XLSX === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <!-- App Container -->
+  <div id="app" class="app-layout">
+    
+    <!-- Top Navigation Bar (Flat Minimalist) -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="brand-logo">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+          <div class="brand-meta">
+            <span class="brand-title">VENTO <span class="brand-badge">MSL</span></span>
+            <span class="brand-subtitle" data-i18n="appSubtitle">Pilotage Commercial & Couverture Terrain</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-center">
+        <!-- Active File Badge -->
+        <div id="activeFileIndicator" class="active-file-pill hidden">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span id="activeFileName" class="file-name-text">Fichier chargé</span>
+          <span id="activeFileStats" class="file-stat-text">0</span>
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <!-- Install App (PWA) Button -->
+        <button id="btnInstallPwa" class="btn btn-secondary btn-sm hidden" title="Installer l'application hors-ligne sur le téléphone">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          <span data-i18n="btnInstallApp">Installer l'App</span>
+        </button>
+
+        <!-- Language Switcher Button -->
+        <button id="langToggle" class="btn btn-secondary btn-sm lang-toggle-btn" title="Changer de langue / تغيير اللغة" aria-label="Changer de langue">
+          <span class="lang-text" id="langToggleText">العربية</span>
+        </button>
+
+        <!-- Import File -->
+        <label for="excelFileInput" class="btn btn-primary btn-sm upload-btn" title="Téléverser un fichier Excel">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span data-i18n="btnImport">Importer Excel</span>
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="visually-hidden">
+        </label>
+
+        <!-- Export File with Exclamation explanation -->
+        <div class="btn-with-info">
+          <button id="btnExportVendorExcel" class="btn btn-secondary btn-sm" title="Exporter les données du vendeur" disabled>
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="btnExport">Exporter Excel</span>
+          </button>
+          <button class="info-pop-btn" data-info="export" aria-label="Aide Export">!</button>
+        </div>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggle" class="btn btn-ghost btn-icon" title="Thème" aria-label="Basculer thème">
+          <svg id="themeIconSun" class="icon-sm hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg id="themeIconMoon" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Empty State / File Drop Zone (Flat Clean) -->
+    <section id="dropZoneSection" class="dropzone-section">
+      <div class="dropzone-box" id="dropZoneArea">
+        <div class="dropzone-icon-wrap">
+          <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <polyline points="9 15 12 12 15 15"/>
+          </svg>
+        </div>
+        <h2 class="dropzone-title" data-i18n="dropTitle">Glissez votre fichier de Suivi Excel ici</h2>
+        <p class="dropzone-subtitle" data-i18n="dropSubtitle">Formats acceptés : .xlsx, .xls (Fichier volumineux multi-vendeurs ou individuel)</p>
+        
+        <div class="dropzone-actions">
+          <label for="excelFileInputDrop" class="btn btn-primary btn-md upload-btn">
+            <svg class="icon-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span data-i18n="btnSelectFile">Sélectionner le fichier Excel (.xlsx)</span>
+            <input type="file" id="excelFileInputDrop" accept=".xlsx, .xls" class="visually-hidden">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Workspace (Cardless, Flat, High-Utility First Page) -->
+    <main id="mainWorkspace" class="main-workspace hidden">
+      
+      <!-- Top Action Strip: Vendor Selector + Star Button + Navigation Tabs -->
+      <section class="vendor-strip">
+        <div class="vendor-strip-main">
+          <div class="vendor-select-group">
+            <label for="vendorSelect" class="vendor-label">
+              <span data-i18n="vendorLabel">Vendeur :</span>
+            </label>
+            <select id="vendorSelect" class="vendor-dropdown">
+              <!-- Populated dynamically -->
+            </select>
+            <button id="btnSetDefaultVendor" class="btn btn-ghost btn-sm pin-profile-btn" title="Mémoriser ce profil comme votre compte par défaut">
+              <svg id="starIcon" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <span id="starBtnText" data-i18n="pinProfile">Mémoriser mon profil</span>
+            </button>
+            <button class="info-pop-btn" data-info="vendor_selector" aria-label="Aide Vendeur">!</button>
+          </div>
+
+          <!-- Secondary Tabs (Keep first page clean, other views easily accessible) -->
+          <nav class="view-tabs" role="tablist">
+            <button class="tab-btn active" data-tab="clients" role="tab">
+              <span data-i18n="tabClients">Clients & Ventes</span>
+            </button>
+            <button class="tab-btn" data-tab="products" role="tab">
+              <span data-i18n="tabCatalog">Catalogue SKUs</span>
+            </button>
+            <button class="tab-btn" data-tab="leaderboard" role="tab">
+              <span data-i18n="tabLeaderboard">Classement Agence</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Quick Horizontal Vendor Switcher Pills -->
+        <div id="vendorPillList" class="vendor-pill-list">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- KPI Metrics Strip (Flat, No Cards, Clear Numbers) -->
+      <section class="kpi-strip">
+        <!-- Metric 1: CA TTC -->
+        <div class="kpi-flat-cell">
+          <div class="kpi-flat-header">
+            <span class="kpi-label" data-i18n="kpiRevenue">Chiffre d'Affaires</span>
+            <button class="info-pop-btn" data-info="ca_ttc" aria-label="Aide CA">!</button>
+          </div>
+          <div class="kpi-flat-val" id="kpiTotalCA">0 DH</div>
+          <div class="kpi-flat-sub">
+            <span data-i18n="kpiAvgBasket">Panier moyen :</span> <strong id="kpiAvgBasket">0 DH</strong>
+          </div>
+        </div>
+
+        <!-- Metric 2: Taux MSL -->
+        <div class="kpi-flat-cell">
+          <div class="kpi-flat-header">
+            <span class="kpi-label" data-i18n="kpiMslRate">Taux d'Activation MSL</span>
+            <button class="info-pop-btn" data-info="msl_rate" aria-label="Aide Taux MSL">!</button>
+          </div>
+          <div class="kpi-flat-val text-success" id="kpiActivationRate">0.0%</div>
+          <div class="kpi-flat-sub">
+            <span id="kpiSkuCoverage">0 / 0 SKUs</span>
+          </div>
+        </div>
+
+        <!-- Metric 3: Portefeuille Clients -->
+        <div class="kpi-flat-cell">
+          <div class="kpi-flat-header">
+            <span class="kpi-label" data-i18n="kpiClients">Portefeuille Clients</span>
+            <button class="info-pop-btn" data-info="portfolio" aria-label="Aide Portefeuille">!</button>
+          </div>
+          <div class="kpi-flat-val">
+            <span id="kpiTotalClients">0</span>
+            <span class="kpi-mini-tag" id="kpiActiveClientsBadge">0 actifs</span>
+          </div>
+          <div class="kpi-flat-sub">
+            <strong id="kpiInactiveClients">0</strong> <span data-i18n="kpiDormant">dormants (0 DH)</span>
+          </div>
+        </div>
+
+        <!-- Metric 4: Opportunités Rapides / 100% -->
+        <div class="kpi-flat-cell">
+          <div class="kpi-flat-header">
+            <span class="kpi-label" data-i18n="kpiOpportunities">Opportunités Clés</span>
+            <button class="info-pop-btn" data-info="quick_wins" aria-label="Aide Opportunités">!</button>
+          </div>
+          <div class="kpi-flat-val text-warning">
+            <span id="kpiQuickWinsCount">0</span>
+            <span class="kpi-mini-tag text-warning" data-i18n="kpiNear100">≤ 3 restants</span>
+          </div>
+          <div class="kpi-flat-sub">
+            <strong id="kpi100PercentClients" class="text-success">0</strong> <span data-i18n="kpiReached100">à 100% validé</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 1: CLIENTS & SALES (THE PRIMARY FOCAL VIEW) -->
+      <section id="tabContentClients" class="tab-pane active">
+        
+        <!-- Search & Instant Filters Strip (Flat Canvas) -->
+        <div class="filter-strip">
+          <div class="filter-strip-top">
+            <!-- Search Input -->
+            <div class="search-input-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="clientSearchInput" placeholder="Rechercher par nom de boutique ou code client..." class="search-input">
+              <button id="btnClearSearch" class="btn-clear hidden" title="Effacer">&times;</button>
+            </div>
+
+            <!-- Segment Selector with Info Button -->
+            <div class="filter-group">
+              <span class="filter-label" data-i18n="filterSegment">Segment :</span>
+              <div class="pill-group" id="segmentFilterPills">
+                <button class="pill-btn active" data-seg="ALL" data-i18n="all">Tous</button>
+                <button class="pill-btn" data-seg="A">A (40)</button>
+                <button class="pill-btn" data-seg="B">B (30)</button>
+                <button class="pill-btn" data-seg="C">C (20)</button>
+                <button class="pill-btn" data-seg="D">D (10)</button>
+              </div>
+              <button class="info-pop-btn" data-info="segments" aria-label="Aide Segments">!</button>
+            </div>
+
+            <!-- Sort Selector -->
+            <div class="filter-group">
+              <span class="filter-label" data-i18n="filterSort">Trier :</span>
+              <select id="sortSelect" class="sort-dropdown">
+                <option value="ca_desc" data-i18n="sortCADesc">CA TTC (Plus élevé)</option>
+                <option value="ca_asc" data-i18n="sortCAAsc">CA TTC (Moins élevé)</option>
+                <option value="act_desc" data-i18n="sortActDesc">Taux Activation % (Décroissant)</option>
+                <option value="act_asc" data-i18n="sortActAsc">Taux Activation % (Croissant)</option>
+                <option value="rem_asc" data-i18n="sortRemAsc">SKUs restants (Proches 100%)</option>
+                <option value="nom_asc" data-i18n="sortNomAsc">Nom Client (A - Z)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Smart Priority Action Chips Strip -->
+          <div class="smart-chips-strip">
+            <span class="smart-label" data-i18n="smartFilterLabel">Actions rapides :</span>
+            <div class="smart-chips-group" id="smartChipsGroup">
+              <button class="chip-btn active" data-smart="ALL">
+                <span data-i18n="all">Tous</span>
+                <span class="chip-count" id="chipCountAll">0</span>
+              </button>
+              <button class="chip-btn chip-warning" data-smart="QUICK_WINS">
+                <span data-i18n="chipQuickWins">🚀 Opportunités Rapides (≤3)</span>
+                <span class="chip-count" id="chipCountQuickWins">0</span>
+              </button>
+              <button class="chip-btn chip-danger" data-smart="ZERO_ACT">
+                <span data-i18n="chipZero">⚠️ Non Activés (0%)</span>
+                <span class="chip-count" id="chipCountZero">0</span>
+              </button>
+              <button class="chip-btn chip-info" data-smart="MID_ACT">
+                <span data-i18n="chipMid">En Cours (1% - 50%)</span>
+                <span class="chip-count" id="chipCountMid">0</span>
+              </button>
+              <button class="chip-btn chip-success" data-smart="HIGH_ACT">
+                <span data-i18n="chipHigh">Bien Engagés (&gt;50%)</span>
+                <span class="chip-count" id="chipCountHigh">0</span>
+              </button>
+              <button class="chip-btn chip-gold" data-smart="FULL_100">
+                <span data-i18n="chipFull">⭐ 100% Validé</span>
+                <span class="chip-count" id="chipCountFull">0</span>
+              </button>
+              <button class="chip-btn" data-smart="TOP_CA">
+                <span data-i18n="chipTopCA">💎 Top 20% CA</span>
+                <span class="chip-count" id="chipCountTopCA">0</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Status & Action Header -->
+        <div class="table-meta-bar">
+          <div class="results-count-text">
+            <span data-i18n="showing">Affichage de</span> <strong id="visibleClientsCount">0</strong> <span data-i18n="clientsOf">client(s) sur</span> <span id="totalFilterClientsCount">0</span>
+          </div>
+          <div class="table-actions">
+            <button id="btnPrintRouteSheet" class="btn btn-ghost btn-sm" title="Imprimer la feuille de route">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              <span data-i18n="btnPrint">Imprimer / PDF</span>
+            </button>
+            <button id="btnCopyDailySummary" class="btn btn-ghost btn-sm" title="Copier le résumé d'activité WhatsApp">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span data-i18n="btnCopyWhatsApp">Résumé WhatsApp</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Flat Borderless Clients Table -->
+        <div class="flat-table-wrapper">
+          <table class="data-table" id="clientsTable">
+            <thead>
+              <tr>
+                <th class="th-w-code" data-i18n="thCode">Code</th>
+                <th class="th-w-client" data-i18n="thClient">Boutique / Client</th>
+                <th class="th-w-seg" data-i18n="thSegment">Segment</th>
+                <th class="th-w-ca text-right" data-i18n="thCA">CA TTC</th>
+                <th class="th-w-act" data-i18n="thActivation">Activation MSL</th>
+                <th class="th-w-rem text-center" data-i18n="thRemaining">SKUs Restants</th>
+                <th class="th-w-actions text-center">
+                  <span data-i18n="thDiagnostic">Diagnostic</span>
+                  <button class="info-pop-btn" data-info="diagnostic" aria-label="Aide Diagnostic">!</button>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="clientsTableBody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+
+          <!-- Empty filtered state -->
+          <div id="noResultsState" class="empty-results-box hidden">
+            <h3 data-i18n="noResultsTitle">Aucun client trouvé</h3>
+            <p data-i18n="noResultsDesc">Essayez de modifier votre recherche ou de réinitialiser les filtres.</p>
+            <button id="btnResetFilters" class="btn btn-secondary btn-sm" data-i18n="btnReset">Réinitialiser les filtres</button>
+          </div>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="pagination-footer">
+          <div class="pagination-info" id="paginationInfo">Page 1 sur 1</div>
+          <div class="pagination-btns">
+            <button id="btnPrevPage" class="btn btn-secondary btn-sm" data-i18n="btnPrev" disabled>Précédent</button>
+            <button id="btnNextPage" class="btn btn-secondary btn-sm" data-i18n="btnNext">Suivant</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: PRODUCTS & SKU MATRIX -->
+      <section id="tabContentProducts" class="tab-pane hidden">
+        <div class="flat-sub-header">
+          <div>
+            <h2 class="sub-header-title">
+              <span data-i18n="skuMatrixTitle">Matrice de Couverture des Références (MSL)</span>
+              <button class="info-pop-btn" data-info="sku_matrix" aria-label="Aide Matrice">!</button>
+            </h2>
+            <p class="sub-header-desc" data-i18n="skuMatrixDesc">Analyse de la pénétration de chaque article dans le portefeuille du vendeur sélectionné.</p>
+          </div>
+          <div class="product-filter-bar">
+            <input type="text" id="skuSearchInput" placeholder="Filtrer les articles..." class="search-input" style="max-width: 240px;">
+            <div class="pill-group" id="skuCategoryPills">
+              <button class="pill-btn active" data-cat="ALL" data-i18n="all">Toutes familles</button>
+              <button class="pill-btn" data-cat="HUILES" data-i18n="catHuiles">Huiles</button>
+              <button class="pill-btn" data-cat="ENTRETIEN" data-i18n="catEntretien">Entretien</button>
+              <button class="pill-btn" data-cat="SOINS & HYGIENE" data-i18n="catSoins">Soins & Hygiène</button>
+              <button class="pill-btn" data-cat="ALIMENTAIRE" data-i18n="catAlim">Alimentaire</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flat-table-wrapper">
+          <table class="data-table" id="skusTable">
+            <thead>
+              <tr>
+                <th data-i18n="thProduct">Produit / Référence</th>
+                <th data-i18n="thCategory">Famille</th>
+                <th class="text-center" data-i18n="thBuyers">Magasins Acheteurs</th>
+                <th data-i18n="thPenetration">Taux de Pénétration</th>
+                <th class="text-right" data-i18n="thTotalSales">Volume / Tonnage (Kg)</th>
+                <th class="text-center" data-i18n="thStatus">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="skusTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4: LEADERBOARD AGENCIA -->
+      <section id="tabContentLeaderboard" class="tab-pane hidden">
+        <div class="flat-sub-header">
+          <div>
+            <h2 class="sub-header-title">
+              <span data-i18n="leaderboardTitle">Classement des Vendeurs de l'Agence</span>
+              <button class="info-pop-btn" data-info="leaderboard" aria-label="Aide Classement">!</button>
+            </h2>
+            <p class="sub-header-desc" data-i18n="leaderboardDesc">Comparatif de performance globale du chiffre d'affaires et de taux MSL.</p>
+          </div>
+          <div class="agency-badge" id="agencyBadgeName">AGENCE</div>
+        </div>
+
+        <div class="leaderboard-grid" id="leaderboardGrid">
+          <!-- Dynamically populated vendor benchmark cards -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Client Drill-Down Modal (Fiche Client & Diagnostic MSL) -->
+    <div id="clientModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="modal-window">
+        <div class="modal-header">
+          <div class="modal-header-left">
+            <div class="modal-client-badge-group">
+              <span id="modalClientSegBadge" class="badge-seg">SEG C</span>
+              <span id="modalClientCode" class="modal-client-code">Code: #000000</span>
+            </div>
+            <h2 id="modalClientName" class="modal-client-title">Nom du Client</h2>
+            <div class="modal-client-subline">
+              <span data-i18n="modalVendor">Vendeur :</span> <strong id="modalClientVendor">Nom du Vendeur</strong>
+              <span class="dot-sep">•</span>
+              <span data-i18n="modalCA">CA TTC :</span> <strong id="modalClientCA" class="text-primary">0 DH</strong>
+            </div>
+          </div>
+          <button id="btnCloseModal" class="modal-close-btn" aria-label="Fermer la fiche">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- MSL Progress Strip in Modal -->
+          <div class="modal-msl-strip">
+            <div class="scorecard-top">
+              <div>
+                <div class="scorecard-title-row">
+                  <span class="scorecard-label" data-i18n="modalActivation">Activation MSL Actuelle</span>
+                  <button class="info-pop-btn" data-info="modal_msl_score" aria-label="Aide Quota MSL">!</button>
+                </div>
+                <span id="modalScoreText" class="scorecard-value">1 / 20 Références (5%)</span>
+                <div id="modalCatalogBreakdownText" class="scorecard-sub-breakdown">Total acheté : 34 articles au catalogue</div>
+              </div>
+              <div class="text-right">
+                <div class="scorecard-title-row scorecard-title-row-right">
+                  <span class="scorecard-label" data-i18n="modalRemaining">SKUs Manquants pour 100%</span>
+                  <button class="info-pop-btn" data-info="modal_remaining_score" aria-label="Aide SKUs Manquants">!</button>
+                </div>
+                <span id="modalRemainingText" class="scorecard-value-warning">19 Articles</span>
+                <div id="modalRemainingSubText" class="scorecard-sub-breakdown text-warning">19 références obligatoires restantes</div>
+              </div>
+            </div>
+            <div class="progress-bar-track-lg">
+              <div id="modalProgressBar" class="progress-bar-fill" style="width: 5%"></div>
+            </div>
+          </div>
+
+          <!-- 7 Essential Eligibility Pillars (Condition d'accès à la Remise 2%) -->
+          <div class="modal-pillars-box">
+            <div class="pillars-box-header">
+              <div class="pillars-header-title">
+                <span class="pillars-icon">🏛️</span>
+                <strong data-i18n="modalPillarsTitle">Éligibilité Remise MSL (2% pour le magasin) : Les 7 Piliers Incontournables</strong>
+                <button class="info-pop-btn" data-info="pillars_eligibility" aria-label="Aide Éligibilité 7 Piliers">!</button>
+              </div>
+              <div id="modalPillarsStatusBadge" class="pillars-status-badge">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+            <div class="pillars-grid" id="modalPillarsGrid">
+              <!-- Dynamically populated 7 chips -->
+            </div>
+          </div>
+
+          <!-- Smart Recommendation Pitch Box -->
+          <div class="smart-pitch-box">
+            <div class="pitch-box-header">
+              <div class="pitch-box-title">
+                <span class="pitch-sparkle">💡</span>
+                <strong data-i18n="modalPitchTitle">Diagnostic Terrain & Articles Recommandés à Proposer</strong>
+                <button class="info-pop-btn" data-info="modal_pitch" aria-label="Aide Pitch">!</button>
+              </div>
+              <span class="pitch-tag" id="modalPitchTag" data-i18n="modalPitchTag">Priorités</span>
+            </div>
+            <div id="modalPitchRecommendations" class="pitch-recommendations-list">
+              <!-- Dynamically populated recommendations -->
+            </div>
+          </div>
+
+          <!-- Two Column View: Activated SKUs vs Missing SKUs -->
+          <div class="modal-skus-split">
+            <!-- Left: Activated Products -->
+            <div class="skus-column">
+              <div class="column-header">
+                <div class="col-title text-success">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span data-i18n="modalOrderedSkus">Articles Commandés au Catalogue</span> (<span id="modalActiveSkusCount">0</span>)
+                  <button class="info-pop-btn" data-info="modal_bought_skus" aria-label="Aide Articles Commandés">!</button>
+                </div>
+                <div id="modalActiveSkusSub" class="col-subtext">22 dans le quota MSL • 12 hors quota</div>
+              </div>
+              <div class="modal-sku-search-wrap">
+                <input type="text" id="modalActiveSkusSearch" class="search-input search-input-sm" placeholder="Rechercher dans les articles commandés...">
+              </div>
+              <div id="modalActiveSkusList" class="sku-item-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Right: Missing SKUs to Target -->
+            <div class="skus-column">
+              <div class="column-header">
+                <div class="col-title text-warning">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span data-i18n="modalMissingSkus">Articles Non Détenus au Catalogue</span> (<span id="modalMissingSkusCount">0</span>)
+                  <button class="info-pop-btn" data-info="modal_missing_skus" aria-label="Aide Articles Non Détenus">!</button>
+                </div>
+                <div id="modalMissingSkusSub" class="col-subtext">dont 18 nécessaires pour le 100% MSL</div>
+              </div>
+              <div class="modal-sku-search-wrap">
+                <input type="text" id="modalMissingSkusSearch" class="search-input search-input-sm" placeholder="Rechercher dans les articles non détenus...">
+              </div>
+              <div id="modalMissingSkusList" class="sku-item-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btnShareWhatsAppClient" class="btn btn-secondary">
+            <span data-i18n="modalBtnWhatsApp">Partager via WhatsApp</span>
+          </button>
+          <button id="btnCloseModalBottom" class="btn btn-primary" data-i18n="modalBtnClose">Fermer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Feature Info Popover Bubble -->
+    <div id="infoPopover" class="info-popover hidden" role="tooltip">
+      <div class="popover-arrow"></div>
+      <div class="popover-header">
+        <strong id="popoverTitle">Titre</strong>
+        <button id="btnClosePopover" class="popover-close-btn">&times;</button>
+      </div>
+      <p id="popoverContent">Contenu explicatif...</p>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
